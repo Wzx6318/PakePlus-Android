@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AI 智聊 - 硅基流动版</title>
+    <style>
+        :root {
+            --bg-color: #000000;
+            --card-bg: #1c1c1e;
+            --header-bg: #0c0c0c;
+            --text-main: #ffffff;
+            --text-sub: #8e8e93;
+            --accent: #0a7cff;
+            --border: #2c2c2e;
+            --user-bubble: #0a7cff;
+            --ai-bubble: #1c1c1e;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- 通用样式 --- */
+        .hidden { display: none !important; }
+        button { cursor: pointer; border: none; outline: none; font-family: inherit; }
+        input, textarea { outline: none; font-family: inherit; }
+
+        /* --- 页面容器 --- */
+        .page {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* --- 顶部导航 --- */
+        .header {
+            height: 50px;
+            background: var(--header-bg);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 17px;
+            position: relative;
+            z-index: 10;
+        }
+        .header-back {
+            position: absolute;
+            left: 15px;
+            font-size: 24px;
+            color: var(--accent);
+            background: none;
+        }
+        .header-add {
+            position: absolute;
+            right: 15px;
+            font-size: 22px;
+            color: var(--accent);
+            background: none;
+        }
+
+        /* --- 底部 Tab 栏 --- */
+        .tab-bar {
+            height: 60px;
+            background: var(--header-bg);
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        .tab-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: var(--text-sub);
+            font-size: 10px;
+            background: none;
+            gap: 4px;
+        }
+        .tab-item.active { color: var(--accent); }
+        .tab-icon { font-size: 24px; }
+
+        /* --- 好友列表页 --- */
+        .friend-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+        .friend-card {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background: var(--card-bg);
+            border-radius: 12px;
+            margin-bottom: 10px;
+            transition: transform 0.1s;
+        }
+        .friend-card:active { transform: scale(0.98); opacity: 0.8; }
+        .avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+            background: #333;
+            margin-right: 15px;
+            border: 1px solid var(--border);
+        }
+        .friend-info h3 { font-size: 16px; margin-bottom: 4px; }
+        .friend-info p { font-size: 13px; color: var(--text-sub); }
+
+        /* --- 聊天页 --- */
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            scroll-behavior: smooth;
+        }
+        .msg-row { display: flex; gap: 10px; max-width: 85%; animation: fadeIn 0.2s ease; }
+        .msg-row.user { align-self: flex-end; flex-direction: row-reverse; }
+        .msg-row.ai { align-self: flex-start; }
+        
+        .msg-row.ai .avatar { cursor: pointer; border: 1px dashed var(--text-sub); }
+        
+        .bubble {
+            padding: 10px 14px;
+            border-radius: 18px;
+            font-size: 15px;
+            line-height: 1.4;
+            word-break: break-word;
+            white-space: pre-wrap;
+        }
+        .msg-row.user .bubble {
+            background: var(--user-bubble);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+        .msg-row.ai .bubble {
+            background: var(--ai-bubble);
+            color: var(--text-main);
+            border-bottom-left-radius: 4px;
+            border: 1px solid var(--border);
+        }
+
+        .input-area {
+            padding: 10px;
+            background: var(--header-bg);
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .chat-input {
+            flex: 1;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 10px 15px;
+            color: white;
+            font-size: 15px;
+        }
+        .send-btn {
+            background: var(--accent);
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+        .send-btn:disabled { background: #333; opacity: 0.5; cursor: not-allowed; }
+
+        /* --- 设置页 --- */
+        .settings-content {
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .form-group { margin-bottom: 20px; }
+        .form-label { display: block; margin-bottom: 8px; color: var(--text-sub); font-size: 14px; }
+        .form-input, .form-textarea {
+            width: 100%;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px;
+            color: white;
+            font-size: 15px;
+        }
+        .form-textarea { min-height: 80px; resize: none; }
+        .save-btn {
+            width: 100%;
+            background: var(--accent);
+            color: white;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+        .tip { font-size: 12px; color: var(--text-sub); margin-top: 5px; }
+
+        /* --- 弹窗通用 --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 100;
+        }
+        .modal {
+            background: var(--card-bg);
+            width: 85%;
+            max-width: 340px;
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid var(--border);
+        }
+        .modal h3 { margin-bottom: 15px; text-align: center; }
+        .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+        .modal-btn { flex: 1; padding: 10px; border-radius: 8px; font-size: 14px; }
+        .btn-cancel { background: #333; color: white; }
+        .btn-confirm { background: var(--accent); color: white; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+    <!-- 1. 好友列表页 -->
+    <div id="page-home" class="page">
+        <div class="header">
+            我的 AI 好友
+            <button class="header-add" onclick="app.openAddModal()">+</button>
+        </div>
+        <div class="friend-list" id="friendListContainer">
+            <!-- JS 动态生成 -->
+        </div>
+    </div>
+
+    <!-- 2. 聊天页 -->
+    <div id="page-chat" class="page hidden">
+        <div class="header">
+            <button class="header-back" onclick="app.showPage('home')">‹</button>
+            <span id="chatTitle">AI 助手</span>
+        </div>
+        <div class="chat-container" id="chatMessages"></div>
+        <div class="input-area">
+            <input type="text" class="chat-input" id="msgInput" placeholder="输入消息..." autocomplete="off">
+            <!-- 右侧圆形发送按钮，样式不变 -->
+            <button class="send-btn" id="sendBtn" onclick="app.sendMessage()">➤</button>
+        </div>
+    </div>
+
+    <!-- 3. 设置页 -->
+    <div id="page-settings" class="page hidden">
+        <div class="header">API 设置</div>
+        <div class="settings-content">
+            <div class="form-group">
+                <label class="form-label">硅基流动 API Key</label>
+                <input type="password" class="form-input" id="apiKeyInput" placeholder="sk-...">
+                <div class="tip">请前往 siliconflow.cn 获取密钥</div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">模型名称 (Model ID)</label>
+                <input type="text" class="form-input" id="modelNameInput" placeholder="例如: Qwen/Qwen2.5-7B-Instruct">
+                <div class="tip">默认推荐: Qwen/Qwen2.5-7B-Instruct</div>
+            </div>
+            <button class="save-btn" onclick="app.saveSettings()">保存配置</button>
+        </div>
+    </div>
+
+    <!-- 底部 Tab 栏 -->
+    <div class="tab-bar" id="mainTabBar">
+        <button class="tab-item active" onclick="app.switchTab('home', this)">
+            <span class="tab-icon">💬</span>
+            <span>消息</span>
+        </button>
+        <button class="tab-item" onclick="app.switchTab('settings', this)">
+            <span class="tab-icon">⚙️</span>
+            <span>设置</span>
+        </button>
+    </div>
+
+    <!-- 修改好友信息弹窗 -->
+    <div id="editModal" class="modal-overlay hidden">
+        <div class="modal">
+            <h3>修改好友信息</h3>
+            <div class="form-group">
+                <label class="form-label">备注名称</label>
+                <input type="text" class="form-input" id="editNameInput">
+            </div>
+            <div class="form-group">
+                <label class="form-label">头像链接 (URL)</label>
+                <input type="text" class="form-input" id="editAvatarInput" placeholder="https://...">
+            </div>
+            <div class="form-group">
+                <label class="form-label">人设提示词</label>
+                <textarea class="form-textarea" id="editPromptInput"></textarea>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn btn-cancel" onclick="app.closeEditModal()">取消</button>
+                <button class="modal-btn btn-confirm" onclick="app.confirmEditFriend()">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 新增好友弹窗 -->
+    <div id="addModal" class="modal-overlay hidden">
+        <div class="modal">
+            <h3>添加新AI好友</h3>
+            <div class="form-group">
+                <label class="form-label">好友名称</label>
+                <input type="text" class="form-input" id="addNameInput" placeholder="例如：知心姐姐">
+            </div>
+            <div class="form-group">
+                <label class="form-label">头像链接</label>
+                <input type="text" class="form-input" id="addAvatarInput" placeholder="留空使用默认头像">
+            </div>
+            <div class="form-group">
+                <label class="form-label">人设Prompt</label>
+                <textarea class="form-textarea" id="addPromptInput" placeholder="描述TA的性格、说话风格..."></textarea>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn btn-cancel" onclick="app.closeAddModal()">取消</button>
+                <button class="modal-btn btn-confirm" onclick="app.confirmAddFriend()">添加</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+const app = {
+    state: {
+        currentPage: 'home',
+        currentChatId: null,
+        editingFriendId: null,
+        config: {
+            apiKey: '',
+            model: 'Qwen/Qwen2.5-7B-Instruct'
+        },
+        friends: [
+            { 
+                id: 1, 
+                name: '小云 (Qwen)', 
+                avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix', 
+                systemPrompt: '你是一个温柔体贴的女性AI好友，名叫小云。请用中文回答，语气亲切自然。',
+                history: [] 
+            },
+            { 
+                id: 2, 
+                name: '极客助手', 
+                avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=Tech', 
+                systemPrompt: '你是一个专业的编程和技术助手。回答简洁准确，擅长解决技术问题。',
+                history: [] 
+            }
+        ],
+        isStreaming: false
+    },
+
+    init() {
+        const savedConfig = localStorage.getItem('sf_config');
+        if (savedConfig) this.state.config = JSON.parse(savedConfig);
+        
+        const savedFriends = localStorage.getItem('sf_friends');
+        if (savedFriends) this.state.friends = JSON.parse(savedFriends);
+
+        document.getElementById('apiKeyInput').value = this.state.config.apiKey;
+        document.getElementById('modelNameInput').value = this.state.config.model;
+
+        this.renderFriendList();
+        
+        // 回车发送
+        document.getElementById('msgInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !this.state.isStreaming) this.sendMessage();
+        });
+    },
+
+    showPage(pageId) {
+        document.querySelectorAll('.page').forEach(el => el.classList.add('hidden'));
+        document.getElementById(`page-${pageId}`).classList.remove('hidden');
+        
+        const tabBar = document.getElementById('mainTabBar');
+        tabBar.classList.toggle('hidden', pageId === 'chat');
+        this.state.currentPage = pageId;
+    },
+
+    switchTab(tabName, btnEl) {
+        document.querySelectorAll('.tab-item').forEach(el => el.classList.remove('active'));
+        btnEl.classList.add('active');
+        this.showPage(tabName);
+    },
+
+    // --- 好友列表 ---
+    renderFriendList() {
+        const container = document.getElementById('friendListContainer');
+        container.innerHTML = '';
+        this.state.friends.forEach(friend => {
+            const div = document.createElement('div');
+            div.className = 'friend-card';
+            div.onclick = () => this.openChat(friend.id);
+            div.innerHTML = `
+                <img src="${friend.avatar}" class="avatar" alt="avatar">
+                <div class="friend-info">
+                    <h3>${friend.name}</h3>
+                    <p>点击开始聊天...</p>
+                </div>
+            `;
+            container.appendChild(div);
+        });
+    },
+
+    openChat(friendId) {
+        this.state.currentChatId = friendId;
+        const friend = this.state.friends.find(f => f.id === friendId);
+        if (!friend) return;
+
+        document.getElementById('chatTitle').innerText = friend.name;
+        this.showPage('chat');
+        this.renderMessages();
+    },
+
+    renderMessages() {
+        const container = document.getElementById('chatMessages');
+        container.innerHTML = '';
+        const friend = this.state.friends.find(f => f.id === this.state.currentChatId);
+        
+        if (friend.history.length === 0) {
+            this.appendMessageUI('ai', `你好呀！我是${friend.name}，很高兴认识你~ 😊`);
+        } else {
+            friend.history.forEach(msg => {
+                this.appendMessageUI(msg.role, msg.content);
+            });
+        }
+        this.scrollToBottom();
+    },
+
+    appendMessageUI(role, text, appendToLast = false) {
+        const container = document.getElementById('chatMessages');
+        const friend = this.state.friends.find(f => f.id === this.state.currentChatId);
+
+        if (appendToLast) {
+            const lastBubble = container.lastElementChild.querySelector('.bubble');
+            lastBubble.innerHTML = this.escapeHtml(text);
+            return;
+        }
+        
+        const row = document.createElement('div');
+        row.className = `msg-row ${role}`;
+        
+        let avatarHtml = '';
+        if (role === 'ai') {
+            avatarHtml = `<img src="${friend.avatar}" class="avatar" onclick="app.openEditModal(${friend.id})" title="点击修改备注和头像">`;
+        } else {
+            avatarHtml = `<div class="avatar" style="background:#0a7cff;display:flex;align-items:center;justify-content:center;font-size:20px;">👤</div>`;
+        }
+
+        row.innerHTML = `
+            ${avatarHtml}
+            <div class="bubble">${this.escapeHtml(text)}</div>
+        `;
+        container.appendChild(row);
+    },
+
+    // --- 流式发送消息 ---
+    async sendMessage() {
+        if (this.state.isStreaming) return;
+        const input = document.getElementById('msgInput');
+        const text = input.value.trim();
+        if (!text) return;
+
+        if (!this.state.config.apiKey) {
+            alert('请先去【设置】页面配置硅基流动 API Key！');
+            this.switchTab('settings', document.querySelectorAll('.tab-item')[1]);
+            return;
+        }
+
+        const friend = this.state.friends.find(f => f.id === this.state.currentChatId);
+        input.value = '';
+        this.appendMessageUI('user', text);
+        friend.history.push({ role: 'user', content: text });
+        this.saveData();
+        this.scrollToBottom();
+
+        const sendBtn = document.getElementById('sendBtn');
+        sendBtn.disabled = true;
+        sendBtn.innerText = '...';
+        this.state.isStreaming = true;
+
+        try {
+            const res = await fetch('https://api.siliconflow.cn/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${this.state.config.apiKey}`
+                },
+                body: JSON.stringify({
+                    model: this.state.config.model,
+                    messages: [
+                        { role: 'system', content: friend.systemPrompt },
+                        ...friend.history.slice(-10)
+                    ],
+                    stream: true
+                })
+            });
+
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(`HTTP ${res.status}: ${errText}`);
+            }
+
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder('utf-8');
+            let fullText = '';
+            let isFirstChunk = true;
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                const chunk = decoder.decode(value);
+                const lines = chunk.split('\n').filter(line => line.trim() !== '');
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const dataStr = line.replace(/^data:\s*/, '');
+                        if (dataStr === '[DONE]') continue;
+                        try {
+                            const data = JSON.parse(dataStr);
+                            const delta = data.choices[0]?.delta?.content || '';
+                            if (!delta) continue;
+                            fullText += delta;
+                            
+                            if (isFirstChunk) {
+                                this.appendMessageUI('ai', fullText);
+                                isFirstChunk = false;
+                            } else {
+                                this.appendMessageUI('ai', fullText, true);
+                            }
+                            this.scrollToBottom();
+                        } catch (e) {}
+                    }
+                }
+            }
+
+            if (!fullText) throw new Error("AI 返回内容为空");
+
+            friend.history.push({ role: 'assistant', content: fullText });
+            this.saveData();
+        } catch (err) {
+            console.error(err);
+            this.appendMessageUI('ai', `❌ 请求失败：${err.message}`);
+        } finally {
+            sendBtn.disabled = false;
+            sendBtn.innerText = '➤';
+            this.state.isStreaming = false;
+        }
+    },
+
+    // --- 修改好友信息 ---
+    openEditModal(friendId) {
+        this.state.editingFriendId = friendId;
+        const friend = this.state.friends.find(f => f.id === friendId);
+        document.getElementById('editNameInput').value = friend.name;
+        document.getElementById('editAvatarInput').value = friend.avatar;
+        document.getElementById('editPromptInput').value = friend.systemPrompt;
+        document.getElementById('editModal').classList.remove('hidden');
+    },
+
+    closeEditModal() {
+        document.getElementById('editModal').classList.add('hidden');
+        this.state.editingFriendId = null;
+    },
+
+    confirmEditFriend() {
+        const name = document.getElementById('editNameInput').value.trim();
+        const avatar = document.getElementById('editAvatarInput').value.trim();
+        const prompt = document.getElementById('editPromptInput').value.trim();
+        
+        if (!name || !prompt) return alert('名称和人设不能为空');
+        const friend = this.state.friends.find(f => f.id === this.state.editingFriendId);
+        friend.name = name;
+        friend.avatar = avatar || friend.avatar;
+        friend.systemPrompt = prompt;
+        
+        document.getElementById('chatTitle').innerText = name;
+        this.renderMessages();
+        this.renderFriendList();
+        this.saveData();
+        this.closeEditModal();
+    },
+
+    // --- 新增好友 ---
+    openAddModal() {
+        document.getElementById('addNameInput').value = '';
+        document.getElementById('addAvatarInput').value = '';
+        document.getElementById('addPromptInput').value = '';
+        document.getElementById('addModal').classList.remove('hidden');
+    },
+
+    closeAddModal() {
+        document.getElementById('addModal').classList.add('hidden');
+    },
+
+    confirmAddFriend() {
+        const name = document.getElementById('addNameInput').value.trim();
+        const avatar = document.getElementById('addAvatarInput').value.trim() || 'https://api.dicebear.com/7.x/avataaars/svg?seed=NewAI';
+        const prompt = document.getElementById('addPromptInput').value.trim();
+        if (!name || !prompt) return alert('名称和人设不能为空');
+
+        const newId = Math.max(...this.state.friends.map(f => f.id)) + 1;
+        this.state.friends.push({
+            id: newId,
+            name,
+            avatar,
+            systemPrompt: prompt,
+            history: []
+        });
+        this.renderFriendList();
+        this.saveData();
+        this.closeAddModal();
+    },
+
+    saveSettings() {
+        const key = document.getElementById('apiKeyInput').value.trim();
+        const model = document.getElementById('modelNameInput').value.trim();
+        
+        if (!key) { alert('请输入 API Key'); return; }
+        
+        this.state.config.apiKey = key;
+        this.state.config.model = model || 'Qwen/Qwen2.5-7B-Instruct';
+        localStorage.setItem('sf_config', JSON.stringify(this.state.config));
+        
+        alert('✅ 设置已保存！');
+        this.switchTab('home', document.querySelectorAll('.tab-item')[0]);
+    },
+
+    saveData() {
+        localStorage.setItem('sf_friends', JSON.stringify(this.state.friends));
+    },
+
+    scrollToBottom() {
+        const c = document.getElementById('chatMessages');
+        setTimeout(() => c.scrollTop = c.scrollHeight, 30);
+    },
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+};
+
+window.onload = () => app.init();
+</script>
+</body>
+</html>
